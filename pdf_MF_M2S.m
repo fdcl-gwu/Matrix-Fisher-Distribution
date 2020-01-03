@@ -21,7 +21,13 @@ function [s FVAL NITER]=pdf_MF_M2S(d,s0)
 
 bool_scaled=1;
 if nargin < 2
-    s0=rand(3,1).*sign(d);
+    if max(abs(d)) < 0.5
+        s0 = pdf_MF_M2S_approx(d,0);
+    elseif min(abs(d)) > 0.5
+        s0 = pdf_MF_M2S_approx(d,1);
+    else
+        s0=rand(3,1).*sign(d);
+    end
 end
 
 s=s0;
@@ -91,6 +97,10 @@ FVAL=f_trial;
 
 if NITER == MAX_ITER || N_SUBITER == MAX_ITER
     disp('Warning: MAX iteration reached');
+    disp('diag(D) = ');
+    disp(d);
+    disp('diag(S) = ');
+    disp(s);
 end
 
 end
@@ -109,7 +119,7 @@ function y=saturation(x,min_x,max_x)
 
 if x <= min_x
     y=min_x;
-elseif x >= max_x;
+elseif x >= max_x
     y=max_x;
 else
     y=x;
