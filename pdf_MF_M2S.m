@@ -25,6 +25,10 @@ if nargin < 2
         s0 = pdf_MF_M2S_approx(d,0);
     elseif min(abs(d)) > 0.5
         s0 = pdf_MF_M2S_approx(d,1);
+        if min(abs(d)) > 0.99
+            s = pdf_MF_M2S_approx(d,1);
+            return;
+        end
     else
         s0=rand(3,1).*sign(d);
     end
