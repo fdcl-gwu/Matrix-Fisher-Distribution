@@ -42,35 +42,26 @@ end
 
 function Y=f_kunze_s(u,s)
 % integrand for the normalizing constant
-[l m]=size(u);
-for ii=1:l
-    for jj=1:m
-        J=besseli(0,1/2*(s(1)-s(2))*(1-u(ii,jj)))*besseli(0,1/2*(s(1)+s(2))*(1+u(ii,jj)));
-        Y(ii,jj)=1/2*exp(s(3)*u(ii,jj))*J;
-    end
-end
+
+J=besseli(0,1/2*(s(1)-s(2))*(1-u)).*besseli(0,1/2*(s(1)+s(2))*(1+u));
+Y=1/2*exp(s(3)*u).*J;
+
 end
 
 function Y=f_kunze_s_scaled_1(u,s)
 % integrand for the normalizing constant scaled by exp(-sum(s)) when s(1)
 % >= s(2)
-[l m]=size(u);
-for ii=1:l
-    for jj=1:m
-        J=besseli(0,1/2*(s(1)-s(2))*(1-u(ii,jj)),1)*besseli(0,1/2*(s(1)+s(2))*(1+u(ii,jj)),1);
-        Y(ii,jj)=1/2*exp((s(2)+s(3))*(u(ii,jj)-1))*J;
-    end
-end
+
+J=besseli(0,1/2*(s(1)-s(2))*(1-u),1).*besseli(0,1/2*(s(1)+s(2))*(1+u),1);
+Y=1/2*exp((s(2)+s(3))*(u-1)).*J;
+
 end
 
 function Y=f_kunze_s_scaled_2(u,s)
 % integrand for the normalizing constant scaled by exp(-sum(s)) when s(1)
 % <= s(2)
-[l m]=size(u);
-for ii=1:l
-    for jj=1:m
-        J=besseli(0,1/2*(s(1)-s(2))*(1-u(ii,jj)),1)*besseli(0,1/2*(s(1)+s(2))*(1+u(ii,jj)),1);
-        Y(ii,jj)=1/2*exp((s(1)+s(3))*(u(ii,jj)-1))*J;
-    end
-end
+
+J=besseli(0,1/2*(s(1)-s(2))*(1-u),1).*besseli(0,1/2*(s(1)+s(2))*(1+u),1);
+Y=1/2*exp((s(1)+s(3))*(u-1)).*J;
+
 end
