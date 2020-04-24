@@ -15,11 +15,7 @@ if nargin < 4
     bool_ddc = false;
 end
 if nargin < 5
-    if bool_scaled
-        tol = 1e-15;
-    else
-        tol = 1e-6;
-    end
+    tol = 1e-6;
 end
 if bool_ddc
     bool_dc = true;
@@ -47,6 +43,7 @@ N = floor(fsolve(@(N) err(N)-tol,norm1phi,options));
 % iteration
 q = length(phi);
 c = 0;
+cOld = nan;
 for n = 0:N
     perm = getPermute(n,q);
     
@@ -54,6 +51,11 @@ for n = 0:N
     for np = 1:Np
         c = c+calc(phi,m,q,perm(:,np));
     end
+    
+    if c==cOld
+        break;
+    end
+    cOld = c;
 end
 
 if ~bool_scaled
@@ -70,6 +72,7 @@ end
 
 %% first order derivative
 dc = zeros(4,1);
+dcOld = nan(4,1);
 for i = 1:4
     % reduce computation cost by ultilizing multiplicity
     if i>1 && lambda(i)==lambda(i-1)
@@ -100,9 +103,16 @@ for i = 1:4
         for np = 1:Np
             dc(i) = dc(i)+calc(phi,d,q,perm(:,np));
         end
+        
+        if dc(i)==dcOld(i)
+            break;
+        end
+        dcOld(i)=dc(i);
     end
     
-    dc(i) = dc(i)*prod(1./gamma(m/2))/sum(lambda(i)==lambda);
+    dc(i) = dc(i)/prod(gamma(d/2))*pi;
+    dc(i) = dc(i)*pi^-1*prod(gamma(d/2)./gamma(m/2));
+    dc(i) = dc(i)/sum(lambda(i)==lambda);
 end
 
 if ~bool_scaled
@@ -112,11 +122,8 @@ if ~bool_scaled
         dc(3)-dc(1)-dc(2)+dc(4)];
     dc_return = dc;
 else
-    dc(4) = c_bar-dc(1)-dc(2)-dc(3);
-    dc = [dc(1)-dc(2)-dc(3)+dc(4),...
-        dc(2)-dc(1)-dc(3)+dc(4),...
-        dc(3)-dc(1)-dc(2)+dc(4)];
-    dc_bar = dc-c_bar;
+    dc = -2*[dc(2)+dc(3),dc(1)+dc(3),dc(1)+dc(2)];
+    dc_bar = dc;
     dc_return = dc_bar;
 end
 
