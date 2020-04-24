@@ -1,4 +1,4 @@
-function [ c_return ] = pdf_MF_normal_holonomic( s, bool_scaled )
+function [ c_return, dc_return, ddc_return ] = pdf_MF_normal_holonomic( s, bool_scaled, bool_dc, bool_ddc )
 % evaluating the normalising constant of matrix Fisher distribution using
 % the holonomic method
 
@@ -8,82 +8,224 @@ assert(or(min(size(s)==[1 3]),min(size(s)==[3 1])),'ERROR: s should be 3 by 1 or
 if nargin < 2
     bool_scaled=false;
 end
+if nargin < 3
+    bool_dc = false;
+end
+if nargin < 4
+    bool_ddc = false;
+end
 
-% convert to Bingham distribution
-S = diag(s);
-B = [2*S-trace(S)*eye(3),zeros(3,1);zeros(1,3),trace(S)];
-lambda = diag(B);
-lambdaScale = lambda(4);
-lambda = sort(lambda-lambdaScale);
-
-% calculate multiplicity
-phi = unique(lambda);
-d = sum(repmat(phi',4,1)==lambda)';
-q = length(d);
-
+%% normalizing constant and its first order derivative
 % initial value
-if q==4
-    phi0 = [-3/8;-2/8;-1/8;0];
-    g0 = [0.831731261822204;0.195214171862506;0.203339498654065;0.211985344739804];
-elseif q==3
-    phi0 = [-2/8;-1/8;0];
-    if d(1)==2
-        g0 = [0.856890854121296;0.207496937135084*2;0.216275333628920];
-    else
-        g0 = [0.883646660593647;0.211851959219676;0.220767917330410*2];
-    end
-elseif q==2
-    phi0 = [-1/8;0];
-    g0 = [0.910954793294271;0.225330576237677*3];
+s0 = [1/8,1/16,0];
+if ~bool_scaled
+    g0 = [1.003259407399006,0.041764420609303,0.020906658448392,0.001304628523573];
 else
-    c_return = 1;
-    return;
+    g0 = [0.831731261822189,-0.797107341033143,-0.814399033204620,-0.830649686787739];
 end
 
 % ODE
-[~,g] = ode45(@(t,g) ODE(t,g,phi,d,q,phi0),[0,1],g0);
+if ~bool_scaled
+    [~,g] = ode45(@(t,g) ODE(t,g,s,s0),[0,1],g0);
+else
+    [~,g] = ode45(@(t,g) ODE_scaled(t,g,s,s0),[0,1],g0);
+end
 
 c_return = g(end,1);
+dc_return = g(end,2:4);
+
+if ~bool_ddc
+    return;
+end
+
+%% second order derivative
+if ~bool_scaled
+    c = g(end,1);
+    dc = g(end,2:4);
+else
+    c_bar = g(end,1);
+    dc_bar = g(end,2:4);
+end
 
 if ~bool_scaled
-    c_return = c_return*exp(lambdaScale);
-end
+    A = zeros(9,9);
+    b = zeros(9,1);
 
-end
-
-
-function P = pfaffian( phi, d, q )
-
-P = zeros(q,q,q-1);
-for i = 1:q-1
-    P(1,:,i) = zeros(1,q);
-    P(1,i+1,i) = 1;
-    
-    index = setdiff(1:q-1,i);
-    P(i+1,1,i) = d(i)/2/phi(i);
-    P(i+1,i+1,i) = 1-sum(d(index)/2./(phi(i)-phi(index)))-d(q)/2/phi(i)-d(i)/2/phi(i);
-    for k = index
-        P(i+1,k+1,i) = d(i)/2/(phi(i)-phi(k))-d(i)/2/phi(i);
+    for i = 1:3
+        for j = 1:3
+            k = setdiff(1:3,[i,j]);
+            if i==j
+                if s(i)~=s(k(1)) && s(i)~=s(k(2))
+                    A(3*(i-1)+j,3*(i-1)+j) = 1;
+                    b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(1))*s(k(1)))/(s(k(1))^2-s(i)^2)-(-dc(i)*s(i)+dc(k(2))*s(k(2)))/(s(k(2))^2-s(i)^2);
+                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 3/2;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(1))*s(k(1)))/(s(k(1))^2-s(i)^2)-dc(i)/2/s(i);
+                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)==0
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(1))*s(k(1)))/(s(k(1))^2-s(i)^2);
+                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 3/2;
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
+                    b(3*(i-1)+j) = c-dc(i)/2/s(i)-(-dc(i)*s(i)+dc(k(2))*s(k(2)))/(s(k(2))^2-s(i)^2);
+                elseif s(i)==s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    b(3*(i-1)+j) = c-dc(i)/s(i);
+                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)==0
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(2))*s(k(2)))/(s(k(2))^2-s(i)^2);
+                else
+                    A(3*(i-1)+j,3*(i-1)+j) = 3;
+                    b(3*(i-1)+j)=c;
+                end
+            else
+                if s(i)~=s(j)
+                    A(3*(i-1)+j,3*(i-1)+j) = 1;
+                    b(3*(i-1)+j) = dc(k)+(-dc(i)*s(j)+dc(j)*s(i))/(s(j)^2-s(i)^2);
+                elseif s(i)==s(j) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 3/2;
+                    A(3*(i-1)+j,3*(i-1)+i) = -1/2;
+                    b(3*(i-1)+j) = dc(k)-dc(i)/2/s(i);
+                else
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    b(3*(i-1)+j) = dc(k);
+                end
+            end
+        end
     end
-    
-    for j = setdiff(1:q-1,i)
-        P(j+1,:,i) = zeros(1,q);
-        P(j+1,i+1,i) = d(j)/2/(phi(i)-phi(j));
-        P(j+1,j+1,i) = -d(i)/2/(phi(i)-phi(j));
+
+    ddc = A\b;
+    ddc = [ddc(1:3),ddc(4:6),ddc(7:9)];
+    ddc_return = ddc;
+else
+    A = zeros(9,9);
+    b = zeros(9,1);
+
+    for i = 1:3
+        for j = 1:3
+            k = setdiff(1:3,[i,j]);
+            if i==j
+                if s(i)~=s(k(1)) && s(i)~=s(k(2))
+                    A(3*(i-1)+j,3*(i-1)+j) = 1;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/(s(i)+s(k(1)))+dc_bar(i)*s(i)/(s(k(1))^2-s(i)^2)-dc_bar(k(1))*s(k(1))/(s(k(1))^2-s(i)^2)...
+                        - c_bar/(s(i)+s(k(2)))+dc_bar(i)*s(i)/(s(k(2))^2-s(i)^2)-dc_bar(k(2))*s(k(2))/(s(k(2))^2-s(i)^2);
+                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 3/2;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/(s(i)+s(k(1)))+dc_bar(i)*s(i)/(s(k(1))^2-s(i)^2)-dc_bar(k(1))*s(k(1))/(s(k(1))^2-s(i)^2)...
+                        - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(2))/2;
+                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)==0
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/(s(i)+s(k(1)))+dc_bar(i)*s(i)/(s(k(1))^2-s(i)^2)-dc_bar(k(1))*s(k(1))/(s(k(1))^2-s(i)^2)...
+                        - c_bar-2*dc_bar(i);
+                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 3/2;
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(1))/2 ...
+                        - c_bar/(s(i)+s(k(2)))+dc_bar(i)*s(i)/(s(k(2))^2-s(i)^2)-dc_bar(k(2))*s(k(2))/(s(k(2))^2-s(i)^2);
+                elseif s(i)==s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(1))/2 ...
+                        - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(2))/2;
+                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)==0
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar-2*dc_bar(i)...
+                        - c_bar/(s(i)+s(k(2)))+dc_bar(i)*s(i)/(s(k(2))^2-s(i)^2)-dc_bar(k(2))*s(k(2))/(s(k(2))^2-s(i)^2);
+                else
+                    A(3*(i-1)+j,3*(i-1)+j) = 3;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar-2*dc_bar(i) - c_bar-2*dc_bar(i);
+                end
+            else
+                if s(i)~=s(j)
+                    A(3*(i-1)+j,3*(i-1)+j) = 1;
+                    b(3*(i-1)+j) = -c_bar/(s(i)+s(j)) - (1+s(j)/(s(j)^2-s(i)^2))*dc_bar(i)...
+                        - (1-s(i)/(s(j)^2-s(i)^2))*dc_bar(j) + dc_bar(k);
+                elseif s(i)==s(j) && s(i)~=0
+                    A(3*(i-1)+j,3*(i-1)+j) = 3/2;
+                    A(3*(i-1)+j,3*(i-1)+i) = -1/2;
+                    b(3*(i-1)+j) = -c_bar/2/s(i) - (1/2+1/2/s(i))*dc_bar(i) - 3/2*dc_bar(j) + dc_bar(k);
+                else
+                    A(3*(i-1)+j,3*(i-1)+j) = 2;
+                    b(3*(i-1)+j) = -c_bar - 2*dc_bar(i) - 2*dc_bar(j) + dc_bar(k);
+                end
+            end
+        end
     end
+
+    ddc_bar = A\b;
+    ddc_bar = [ddc_bar(1:3),ddc_bar(4:6),ddc_bar(7:9)];
+    ddc_return = ddc_bar;
 end
 
 end
 
 
-function f = ODE( t, g, phi, d, q, phi0 )
+function P = pfaffian( s )
 
-phit = (1-t)*phi0+t*phi;
-P = pfaffian(phit,d,q);
+P(:,:,1) = [0,1,0,0;
+    1,-s(1)/(s(1)^2-s(2)^2)-s(1)/(s(1)^2-s(3)^2),s(2)/(s(1)^2-s(2)^2),s(3)/(s(1)^2-s(3)^2);
+    0,s(2)/(s(1)^2-s(2)^2),-s(1)/(s(1)^2-s(2)^2),1;
+    0,s(3)/(s(1)^2-s(3)^2),1,-s(1)/(s(1)^2-s(3)^2)];
+
+P(:,:,2) = [0,0,1,0;
+    0,-s(2)/(s(2)^2-s(1)^2),s(1)/(s(2)^2-s(1)^2),1;
+    1,s(1)/(s(2)^2-s(1)^2),-s(2)/(s(2)^2-s(1)^2)-s(2)/(s(2)^2-s(3)^2),s(3)/(s(2)^2-s(3)^2);
+    0,1,s(3)/(s(2)^2-s(3)^2),-s(2)/(s(2)^2-s(3)^2)];
+
+P(:,:,3) = [0,0,0,1;
+    0,-s(3)/(s(3)^2-s(1)^2),1,s(1)/(s(3)^2-s(1)^2);
+    0,1,-s(3)/(s(3)^2-s(2)^2),s(2)/(s(3)^2-s(2)^2);
+    1,s(1)/(s(3)^2-s(1)^2),s(2)/(s(3)^2-s(2)^2),-s(3)/(s(3)^2-s(1)^2)-s(3)/(s(3)^2-s(2)^2)];
+
+end
+
+
+function P = pfaffian_scaled( s )
+
+P(:,:,1) = [0,1,0,0;
+    -1/(s(1)+s(2))-1/(s(1)+s(3)),-2-s(1)/(s(1)^2-s(2)^2)-s(1)/(s(1)^2-s(3)^2),s(2)/(s(1)^2-s(2)^2),s(3)/(s(1)^2-s(3)^2);
+    -1/(s(1)+s(2)),-1+s(2)/(s(1)^2-s(2)^2),-1-s(1)/(s(1)^2-s(2)^2),1;
+    -1/(s(1)+s(3)),-1+s(3)/(s(1)^2-s(3)^2),1,-1-s(1)/(s(1)^2-s(3)^2)];
+
+P(:,:,2) = [0,0,1,0;
+    -1/(s(2)+s(1)),-1-s(2)/(s(2)^2-s(1)^2),-1+s(1)/(s(2)^2-s(1)^2),1;
+    -1/(s(2)+s(1))-1/(s(2)+s(3)),s(1)/(s(2)^2-s(1)^2),-2-s(2)/(s(2)^2-s(1)^2)-s(2)/(s(2)^2-s(3)^2),s(3)/(s(2)^2-s(3)^2);
+    -1/(s(2)+s(3)),1,-1+s(3)/(s(2)^2-s(3)^2),-1-s(2)/(s(2)^2-s(3)^2)];
+
+P(:,:,3) = [0,0,0,1;
+    -1/(s(3)+s(1)),-1-s(3)/(s(3)^2-s(1)^2),1,-1+s(1)/(s(3)^2-s(1)^2);
+    -1/(s(3)+s(2)),1,-1-s(3)/(s(3)^2-s(2)^2),-1+s(2)/(s(3)^2-s(2)^2);
+    -1/(s(3)+s(1))-1/(s(3)+s(2)),s(1)/(s(3)^2-s(1)^2),s(2)/(s(3)^2-s(2)^2),-2-s(3)/(s(3)^2-s(1)^2)-s(3)/(s(3)^2-s(2)^2)];
+
+end
+
+
+function f = ODE( t, g, s, s0 )
+
+st = (1-t)*s0+t*s;
+P = pfaffian(st);
 
 f = 0;
-for i = 1:q-1
-    f = f + P(:,:,i)*(phi(i)-phi0(i))*g;
+for i = 1:3
+    f = f + P(:,:,i)*(s(i)-s0(i))*g;
+end
+
+end
+
+
+function f = ODE_scaled( t, g, s, s0 )
+
+st = (1-t)*s0+t*s;
+P = pfaffian_scaled(st);
+
+f = 0;
+for i = 1:3
+    f = f + P(:,:,i)*(s(i)-s0(i))*g;
 end
 
 end
