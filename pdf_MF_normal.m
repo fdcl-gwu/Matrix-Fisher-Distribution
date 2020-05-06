@@ -87,26 +87,26 @@ if ~bool_scaled
         for j = 1:3
             k = setdiff(1:3,[i,j]);
             if i==j
-                if s(i)~=s(k(1)) && s(i)~=s(k(2))
+                if abs(s(i))~=abs(s(k(1))) && abs(s(i))~=abs(s(k(2)))
                     A(3*(i-1)+j,3*(i-1)+j) = 1;
                     b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(1))*s(k(1)))/(s(k(1))^2-s(i)^2)-(-dc(i)*s(i)+dc(k(2))*s(k(2)))/(s(k(2))^2-s(i)^2);
-                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                elseif abs(s(i))~=abs(s(k(1))) && abs(s(i))==abs(s(k(2))) && s(i)~=0
                     A(3*(i-1)+j,3*(i-1)+j) = 3/2;
-                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2*sign(s(i)*s(k(2)));
                     b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(1))*s(k(1)))/(s(k(1))^2-s(i)^2)-dc(i)/2/s(i);
-                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)==0
+                elseif abs(s(i))~=abs(s(k(1))) && s(i)==s(k(2)) && s(i)==0
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
                     b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(1))*s(k(1)))/(s(k(1))^2-s(i)^2);
-                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)~=0
+                elseif abs(s(i))==abs(s(k(1))) && abs(s(i))~=abs(s(k(2))) && s(i)~=0
                     A(3*(i-1)+j,3*(i-1)+j) = 3/2;
-                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2*sign(s(i)*s(k(1)));
                     b(3*(i-1)+j) = c-dc(i)/2/s(i)-(-dc(i)*s(i)+dc(k(2))*s(k(2)))/(s(k(2))^2-s(i)^2);
-                elseif s(i)==s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                elseif abs(s(i))==abs(s(k(1))) && abs(s(i))==abs(s(k(2))) && s(i)~=0
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
-                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
-                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2*sign(s(i)*s(k(1)));
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2*sign(s(i)*s(k(2)));
                     b(3*(i-1)+j) = c-dc(i)/s(i);
-                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)==0
+                elseif s(i)==s(k(1)) && abs(s(i))~=abs(s(k(2))) && s(i)==0
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
                     b(3*(i-1)+j) = c-(-dc(i)*s(i)+dc(k(2))*s(k(2)))/(s(k(2))^2-s(i)^2);
                 else
@@ -114,13 +114,13 @@ if ~bool_scaled
                     b(3*(i-1)+j)=c;
                 end
             else
-                if s(i)~=s(j)
+                if abs(s(i))~=abs(s(j))
                     A(3*(i-1)+j,3*(i-1)+j) = 1;
                     b(3*(i-1)+j) = dc(k)+(-dc(i)*s(j)+dc(j)*s(i))/(s(j)^2-s(i)^2);
-                elseif s(i)==s(j) && s(i)~=0
+                elseif abs(s(i))==abs(s(j)) && s(i)~=0
                     A(3*(i-1)+j,3*(i-1)+j) = 3/2;
-                    A(3*(i-1)+j,3*(i-1)+i) = -1/2;
-                    b(3*(i-1)+j) = dc(k)-dc(i)/2/s(i);
+                    A(3*(i-1)+j,3*(i-1)+i) = -1/2*sign(s(i)*s(j));
+                    b(3*(i-1)+j) = dc(k)-dc(j)/2/s(i);
                 else
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
                     b(3*(i-1)+j) = dc(k);
@@ -140,31 +140,35 @@ else
         for j = 1:3
             k = setdiff(1:3,[i,j]);
             if i==j
-                if s(i)~=s(k(1)) && s(i)~=s(k(2))
+                if abs(s(i))~=abs(s(k(1))) && abs(s(i))~=abs(s(k(2)))
                     A(3*(i-1)+j,3*(i-1)+j) = 1;
                     b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/(s(i)+s(k(1)))+dc_bar(i)*s(i)/(s(k(1))^2-s(i)^2)-dc_bar(k(1))*s(k(1))/(s(k(1))^2-s(i)^2)...
                         - c_bar/(s(i)+s(k(2)))+dc_bar(i)*s(i)/(s(k(2))^2-s(i)^2)-dc_bar(k(2))*s(k(2))/(s(k(2))^2-s(i)^2);
-                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                elseif abs(s(i))~=abs(s(k(1))) && abs(s(i))==abs(s(k(2))) && s(i)~=0
+                    sig = sign(s(i)*s(k(2)));
                     A(3*(i-1)+j,3*(i-1)+j) = 3/2;
-                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2*sig;
                     b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/(s(i)+s(k(1)))+dc_bar(i)*s(i)/(s(k(1))^2-s(i)^2)-dc_bar(k(1))*s(k(1))/(s(k(1))^2-s(i)^2)...
-                        - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(2))/2;
-                elseif s(i)~=s(k(1)) && s(i)==s(k(2)) && s(i)==0
+                        - (1/2-sig/2+1/2/s(i))*c_bar-(1/2/s(i)+1-sig/2)*dc_bar(i)+sig*dc_bar(k(2))/2;
+                elseif abs(s(i))~=abs(s(k(1))) && s(i)==s(k(2)) && s(i)==0
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
                     b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/(s(i)+s(k(1)))+dc_bar(i)*s(i)/(s(k(1))^2-s(i)^2)-dc_bar(k(1))*s(k(1))/(s(k(1))^2-s(i)^2)...
                         - c_bar-2*dc_bar(i);
-                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)~=0
+                elseif abs(s(i))==abs(s(k(1))) && abs(s(i))~=abs(s(k(2))) && s(i)~=0
+                    sig = sign(s(i)*s(k(1)));
                     A(3*(i-1)+j,3*(i-1)+j) = 3/2;
-                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
-                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(1))/2 ...
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2*sign(s(i)*s(k(1)));
+                    b(3*(i-1)+j) = -2*dc_bar(i) - (1/2-sig/2+1/2/s(i))*c_bar-(1/2/s(i)+1-sig/2)*dc_bar(i)+sig*dc_bar(k(1))/2 ...
                         - c_bar/(s(i)+s(k(2)))+dc_bar(i)*s(i)/(s(k(2))^2-s(i)^2)-dc_bar(k(2))*s(k(2))/(s(k(2))^2-s(i)^2);
-                elseif s(i)==s(k(1)) && s(i)==s(k(2)) && s(i)~=0
+                elseif abs(s(i))==abs(s(k(1))) && abs(s(i))==abs(s(k(2))) && s(i)~=0
+                    sig1 = sign(s(i)*s(k(1)));
+                    sig2 = sign(s(i)*s(k(2)));
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
-                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2;
-                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2;
-                    b(3*(i-1)+j) = -2*dc_bar(i) - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(1))/2 ...
-                        - c_bar/2/s(i)-(1/2/s(i)+1/2)*dc_bar(i)+dc_bar(k(2))/2;
-                elseif s(i)==s(k(1)) && s(i)~=s(k(2)) && s(i)==0
+                    A(3*(i-1)+j,3*(i-1)+k(1)) = -1/2*sig1;
+                    A(3*(i-1)+j,3*(i-1)+k(2)) = -1/2*sig2;
+                    b(3*(i-1)+j) = -2*dc_bar(i) - (1/2-sig1/2+1/2/s(i))*c_bar-(1/2/s(i)+1-sig1/2)*dc_bar(i)+sig1*dc_bar(k(1))/2 ...
+                        - (1/2-sig2/2+1/2/s(i))*c_bar-(1/2/s(i)+1-sig2/2)*dc_bar(i)+sig2*dc_bar(k(2))/2;
+                elseif s(i)==s(k(1)) && abs(s(i))~=abs(s(k(2))) && s(i)==0
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
                     b(3*(i-1)+j) = -2*dc_bar(i) - c_bar-2*dc_bar(i)...
                         - c_bar/(s(i)+s(k(2)))+dc_bar(i)*s(i)/(s(k(2))^2-s(i)^2)-dc_bar(k(2))*s(k(2))/(s(k(2))^2-s(i)^2);
@@ -173,14 +177,15 @@ else
                     b(3*(i-1)+j) = -2*dc_bar(i) - c_bar-2*dc_bar(i) - c_bar-2*dc_bar(i);
                 end
             else
-                if s(i)~=s(j)
+                if abs(s(i))~=abs(s(j))
                     A(3*(i-1)+j,3*(i-1)+j) = 1;
                     b(3*(i-1)+j) = -c_bar/(s(i)+s(j)) - (1+s(j)/(s(j)^2-s(i)^2))*dc_bar(i)...
                         - (1-s(i)/(s(j)^2-s(i)^2))*dc_bar(j) + dc_bar(k);
-                elseif s(i)==s(j) && s(i)~=0
+                elseif abs(s(i))==abs(s(j)) && s(i)~=0
+                    sig = sign(s(i)*s(j));
                     A(3*(i-1)+j,3*(i-1)+j) = 3/2;
-                    A(3*(i-1)+j,3*(i-1)+i) = -1/2;
-                    b(3*(i-1)+j) = -c_bar/2/s(i) - (1/2+1/2/s(i))*dc_bar(i) - 3/2*dc_bar(j) + dc_bar(k);
+                    A(3*(i-1)+j,3*(i-1)+i) = -1/2*sig;
+                    b(3*(i-1)+j) = -(1/2-sig/2+1/2/s(i))*c_bar - (3/2-sig)*dc_bar(i) - (3/2+1/2/s(i))*dc_bar(j) + dc_bar(k);
                 else
                     A(3*(i-1)+j,3*(i-1)+j) = 2;
                     b(3*(i-1)+j) = -c_bar - 2*dc_bar(i) - 2*dc_bar(j) + dc_bar(k);
